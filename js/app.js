@@ -128,31 +128,95 @@
     window.scrollTo({ top: 0 });
   }
 
+  /* ------------------------------------------------------------ 媒體資產 */
+
+  /* 場景背景與人物照。每個底檔名旁若放同名 .mp4（如 img/bg_intro.mp4），
+     載入成功會自動從靜態圖切換成無聲循環影片，不用改程式。 */
+  const MEDIA = {
+    bg: {
+      intro: 'img/bg_intro',
+      testimony: 'img/bg_testimony',
+      interrogation: 'img/bg_interrogation',
+      ranking: 'img/bg_ranking',
+      feedback: 'img/bg_feedback',
+    },
+    charImg: (key) => `img/char_${key}.jpeg`,
+    bot: 'img/bot.jpeg',
+  };
+
+  const avImg = (key) => `<img class="avatar photo" src="${MEDIA.charImg(key)}" alt="">`;
+
+  let curScene = null;
+
+  /* 全畫面電影背景：交叉淡入 + Ken Burns 慢速推鏡；有 mp4 就播影片 */
+  function setScene(key) {
+    if (curScene === key) return;
+    curScene = key;
+    const root = $('#sceneBg');
+    if (!root) return;
+    const base = MEDIA.bg[key];
+
+    const layer = document.createElement('div');
+    layer.className = 'layer';
+    const img = document.createElement('img');
+    img.className = 'bg-media';
+    img.src = base + '.jpeg';
+    img.alt = '';
+    layer.appendChild(img);
+    root.appendChild(layer);
+
+    /* 嘗試載入同名影片；成功才替換（失敗時安靜地維持靜態圖） */
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const v = document.createElement('video');
+      v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
+      v.className = 'bg-media';
+      v.src = base + '.mp4';
+      v.addEventListener('loadeddata', () => {
+        if (curScene !== key) return;
+        layer.replaceChildren(v);
+        v.play().catch(() => {});
+      });
+    }
+
+    requestAnimationFrame(() => requestAnimationFrame(() => layer.classList.add('show')));
+    [...root.children].slice(0, -1).forEach((old) => {
+      old.classList.remove('show');
+      setTimeout(() => old.remove(), 1500);
+    });
+  }
+
   /* ------------------------------------------------------------ 各階段畫面 */
 
   function renderStep() {
+    setScene(STEPS[S.step].key);
     const fns = [viewIntro, viewTestimony, viewInterrogation, viewRanking, viewFeedback];
     fns[S.step]();
   }
 
   function viewIntro() {
     app().innerHTML = `
-      <div class="eyebrow">CRITICAL THINKING GAME ／ 模擬展示</div>
-      <h1>${DEMO.meta.title}</h1>
-      <p class="hint-line">${DEMO.meta.level}｜訓練焦點：${DEMO.meta.skills}</p>
+      <div class="hero">
+        <div class="eyebrow">互動批判思考偵探遊戲 ／ 模擬展示</div>
+        <div class="display"><span class="l1">MOON</span><span class="l2">ECLIPSE</span></div>
+        <h1 class="zh-display">${DEMO.meta.title}</h1>
+        <p class="tagline">監視器沒有正對冰箱。六個人的說法，是你唯一的畫面——而每一句，都只說了一部分。</p>
+      </div>
+
+      <div class="now-task">
+        <div><span class="nt-label">你現在知道</span><b>23:00 左右 B-9 被發現已空；系統在 22:47:09 記下「標籤狀態異常」。</b></div>
+        <div><span class="nt-label">目前任務</span><b>${esc(DEMO.meta.task)}</b></div>
+      </div>
 
       <div class="video-box">
-        <div class="vb-head">▶ 劇情影片（demo 以逐字稿代替）</div>
+        <div class="vb-head"><span class="feed-tag">SECURE FEED</span><span class="feed-name">案發紀錄｜demo 以逐字稿代替影片</span></div>
         ${DEMO.script.map((p) => `<p class="${/COLD-6|22:47/.test(p) ? 'sys' : ''}">${esc(p)}</p>`).join('')}
       </div>
 
-      <div class="card dim">
-        <b style="color:var(--text)">本關任務：</b>${esc(DEMO.meta.task)}
-      </div>
+      <p class="hint-line">${DEMO.meta.level}｜訓練焦點：${DEMO.meta.skills}</p>
 
       <div class="footer-nav">
         <span></span>
-        <button class="btn" id="next0">開始調查 →</button>
+        <button class="btn" id="next0">從 B-9 空了那一刻開始 ↗</button>
       </div>
     `;
     $('#next0').addEventListener('click', () => go(1));
@@ -162,16 +226,22 @@
     app().innerHTML = `
       <div class="eyebrow">PHASE 2 ／ TESTIMONY</div>
       <h2>六人發言</h2>
-      <p class="hint-line">點擊卡片閱讀每個人的說法。閱讀時留意：哪些是<b>親眼所見</b>，哪些是<b>自行推測</b>？</p>
-      <div class="char-grid" style="margin-top:14px">
-        ${DEMO.characters.map((c) => `
+      <p class="hint-line">點開證詞檔案，閱讀每個人的說法。閱讀時留意：哪些是<b>親眼所見</b>，哪些是<b>自行推測</b>？</p>
+      <div class="char-grid" style="margin-top:16px">
+        ${DEMO.characters.map((c, i) => `
           <div class="char-card ${S.read[c.key] ? 'read' : ''}" data-k="${c.key}">
-            <div class="char-head">
-              <div class="avatar" style="border-color:${c.color}">${c.emoji}</div>
-              <div><div class="nm">${c.name}</div><div class="rl">${c.role}</div></div>
+            <div class="cc-media">
+              <img class="cc-photo" src="${MEDIA.charImg(c.key)}" alt="${c.name}">
+              <span class="cc-tag">0${i + 1}／證詞</span>
+              ${S.read[c.key] ? '<span class="cc-flag">✓ 已查證</span>' : ''}
             </div>
-            <div class="trait">${esc(c.trait)}</div>
-            ${S.read[c.key] ? '<div class="read-flag">✓ 已閱讀</div>' : ''}
+            <div class="cc-body">
+              <div class="cc-code">SUBJ—0${i + 1}</div>
+              <div class="cc-name">${c.name}</div>
+              <div class="cc-role">${c.role}</div>
+              <div class="cc-hook">${esc(c.trait)}</div>
+              <div class="cc-cta">開啟證詞檔案 →</div>
+            </div>
           </div>`).join('')}
       </div>
       <div class="footer-nav">
@@ -187,36 +257,53 @@
 
   function openTestimony(key) {
     const c = charOf(key);
+    const idx = DEMO.characters.findIndex((x) => x.key === key) + 1;
     S.read[key] = true;
     openModal(`
       <div class="modal-head">
-        <div class="avatar" style="border-color:${c.color}">${c.emoji}</div>
-        <div><div class="nm">${c.name}</div><div class="rl">${c.role}</div></div>
+        <div><div class="ph-title">住戶證詞研判</div><div class="ph-file">FILE NO. SUBJ—0${idx}</div></div>
         <button class="x" data-close>×</button>
       </div>
       <div class="modal-body">
+        <div class="dossier-id">
+          <div class="di-photo"><img src="${MEDIA.charImg(key)}" alt="${c.name}"></div>
+          <div>
+            <div class="di-code">SUBJ—0${idx}</div>
+            <div class="di-name">${c.name}</div>
+            <div class="di-verified">Identity Verified</div>
+            <div class="di-role">${c.role}</div>
+          </div>
+        </div>
         <div class="testimony-quote">「${esc(c.testimony)}」</div>
+        <div class="di-note">${esc(c.trait)}</div>
+        <div class="paper-foot">Testimony on Record <span>✓</span></div>
         <p class="hint-line">— 可在下一階段「訊問」中針對這段說法提問。</p>
       </div>
-    `, () => renderStep());
+    `, () => renderStep(), 'paper');
   }
 
   function viewInterrogation() {
     app().innerHTML = `
       <div class="eyebrow">PHASE 3 ／ INTERROGATION</div>
       <h2>訊問</h2>
-      <p class="hint-line">選擇角色進入問答。可點<b>建議問題</b>，也可以<b>自由輸入</b>問題（demo 會比對到最接近的劇本回答）。切換上方溫度後重問同一題，即可比較兩種 AI 風格。</p>
-      <div class="char-grid" style="margin-top:14px">
-        ${DEMO.characters.map((c) => {
+      <p class="hint-line">選擇角色接通加密線路。可點<b>建議問題</b>，也可以<b>自由輸入</b>問題（demo 會比對到最接近的劇本回答）。切換上方溫度後重問同一題，即可比較兩種 AI 風格。</p>
+      <div class="char-grid" style="margin-top:16px">
+        ${DEMO.characters.map((c, i) => {
           const n = (S.chats[c.key] || []).filter((m) => m.who === 'me').length;
           return `
-          <div class="char-card" data-k="${c.key}">
-            <div class="char-head">
-              <div class="avatar" style="border-color:${c.color}">${c.emoji}</div>
-              <div><div class="nm">${c.name}</div><div class="rl">${c.role}</div></div>
+          <div class="char-card ${n ? 'read' : ''}" data-k="${c.key}">
+            <div class="cc-media">
+              <img class="cc-photo" src="${MEDIA.charImg(c.key)}" alt="${c.name}">
+              <span class="cc-tag">0${i + 1}／訊問</span>
+              ${n ? `<span class="cc-flag">通聯 ${n} 次</span>` : ''}
             </div>
-            <div class="trait">${esc(c.trait)}</div>
-            ${n ? `<div class="read-flag">💬 已提問 ${n} 次</div>` : ''}
+            <div class="cc-body">
+              <div class="cc-code">SUBJ—0${i + 1}</div>
+              <div class="cc-name">${c.name}</div>
+              <div class="cc-role">${c.role}</div>
+              <div class="cc-hook">${esc(c.trait)}</div>
+              <div class="cc-cta">接通訊問線路 →</div>
+            </div>
           </div>`;
         }).join('')}
       </div>
@@ -240,8 +327,9 @@
 
     openModal(`
       <div class="modal-head">
-        <div class="avatar" style="border-color:${c.color}">${c.emoji}</div>
+        ${avImg(key)}
         <div><div class="nm">${c.name}</div><div class="rl">${c.role}</div></div>
+        <div class="call-status"><span class="dot"></span>加密線路已接通</div>
         <button class="x" data-close>×</button>
       </div>
       <div class="modal-body">
@@ -296,10 +384,10 @@
     el.innerHTML = S.chats[key].map((m) => m.who === 'me'
       ? `<div class="msg me"><div class="bubble">${esc(m.text)}</div></div>`
       : `<div class="msg them">
-           <div class="avatar" style="border-color:${c.color}">${c.emoji}</div>
+           ${avImg(key)}
            <div class="bubble"><span class="temp-chip ${m.temp}">${m.temp === 'low' ? '低溫 T≈0.2' : '高溫 T≈1.0'}</span><br>${esc(m.text)}</div>
          </div>`).join('')
-      + (typing ? `<div class="msg them"><div class="avatar" style="border-color:${c.color}">${c.emoji}</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>` : '');
+      + (typing ? `<div class="msg them">${avImg(key)}<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>` : '');
     const body = el.closest('.modal-body');
     if (body) body.scrollTop = body.scrollHeight;
   }
@@ -308,17 +396,18 @@
 
   function viewRanking() {
     app().innerHTML = `
-      <div class="eyebrow">PHASE 5 ／ JUDGEMENT</div>
+      <div class="eyebrow">PHASE 4 ／ JUDGEMENT</div>
       <h2>推理判斷</h2>
       <p class="hint-line">根據證詞與訊問結果，選出你認為<b>說法最不合理</b>的一個人，並寫下理由。</p>
-      <div class="pick-list" style="margin-top:14px">
-        ${DEMO.characters.map((c) => `
+      <div class="pick-list" style="margin-top:16px">
+        ${DEMO.characters.map((c, i) => `
           <div class="pick-item ${S.pick === c.key ? 'on' : ''}" data-k="${c.key}">
-            <div class="tick">${S.pick === c.key ? '✓' : ''}</div>
+            <div class="pi-num">0${i + 1}</div>
             <div class="pi-body">
-              <div class="pi-name">${c.emoji} ${c.name}<span style="font-weight:400;color:var(--text-dim);font-size:12.5px">　${c.role}</span></div>
+              <div class="pi-name">${c.name}<span class="pi-role">${c.role}</span></div>
               <div class="pi-text">「${esc(c.testimony.slice(0, 52))}…」</div>
             </div>
+            <div class="tick">${S.pick === c.key ? '✓' : ''}</div>
           </div>`).join('')}
       </div>
       <textarea class="reason" id="reasonBox" placeholder="我的理由：這個說法從哪一個觀察，跳到了哪一個結論？">${esc(S.reason)}</textarea>
@@ -343,7 +432,7 @@
   function viewFeedback() {
     if (!S.submitted && !S.pick) {
       app().innerHTML = `
-        <div class="eyebrow">PHASE 6 ／ FEEDBACK</div>
+        <div class="eyebrow">PHASE 5 ／ FEEDBACK</div>
         <h2>回饋</h2>
         <div class="card dim">請先完成「推理判斷」並送出，才會產生回饋。</div>
         <div class="footer-nav"><button class="btn ghost" id="backF">← 前往推理判斷</button><span></span></div>
@@ -355,7 +444,7 @@
     /* 控制組：只確認收到作答，不給任何 AI 回饋 */
     if (S.group === 'ctrl') {
       app().innerHTML = `
-        <div class="eyebrow">PHASE 6 ／ FEEDBACK（控制組）</div>
+        <div class="eyebrow">PHASE 5 ／ FEEDBACK（控制組）</div>
         <div class="card control-done">
           <div class="big">📮</div>
           <h2>作答已送出</h2>
@@ -371,15 +460,16 @@
     const picked = charOf(S.pick);
     const hit = picked && picked.verdict === 'flaw';
     app().innerHTML = `
-      <div class="eyebrow">PHASE 6 ／ FEEDBACK（實驗組・${tempLabel()}）</div>
+      <div class="eyebrow">PHASE 5 ／ FEEDBACK（實驗組・${tempLabel()}）</div>
       <h2>AI 批判思考回饋</h2>
 
-      <div class="card" style="border-color:var(--accent)">
-        <b style="color:var(--accent)">🤖 AI 引導：</b>${esc(pickTemp(DEMO.feedback.opening))}
+      <div class="card ai-card">
+        <div class="vb-head" style="border-left:0;padding-left:0;margin-bottom:8px"><span class="feed-tag">AI GUIDE</span><span class="feed-name">批判思考引導</span></div>
+        ${esc(pickTemp(DEMO.feedback.opening))}
       </div>
 
       <div class="pick-result ${hit ? 'hit' : 'miss'}">
-        你選出的最不合理說法：<b>${picked.emoji} ${picked.name}</b><br>
+        你選出的最不合理說法：<b>${picked.name}</b><br>
         ${hit
           ? (S.temp === 'low'
               ? 'AI 判定：正確。此說法確實含有推論瑕疵，詳見下方分析。'
@@ -391,19 +481,20 @@
       </div>
 
       <h2 style="margin-top:22px">六人說法逐一檢視</h2>
-      ${DEMO.characters.map((c) => `
+      ${DEMO.characters.map((c, i) => `
         <div class="fb-item ${c.verdict}">
           <div class="char-head">
-            <div class="avatar" style="border-color:${c.color}">${c.emoji}</div>
-            <div><div class="nm">${c.name}</div><div class="rl">${c.role}</div></div>
+            ${avImg(c.key)}
+            <div><div class="nm">${c.name}<span style="font-family:var(--font-en);font-size:10px;letter-spacing:.25em;color:var(--text-dim);margin-left:10px">SUBJ—0${i + 1}</span></div><div class="rl">${c.role}</div></div>
           </div>
           <div class="fb-quote">「${esc(c.testimony)}」</div>
           <div class="fb-verdict">${esc(pickTemp(DEMO.feedback.perVerdict[c.verdict]))}</div>
           <div class="fb-crit">${esc(c.criterion)}</div>
         </div>`).join('')}
 
-      <div class="card" style="border-color:var(--accent)">
-        <b style="color:var(--accent)">🤖 AI 總結：</b>${esc(pickTemp(DEMO.feedback.conclusion))}
+      <div class="card ai-card">
+        <div class="vb-head" style="border-left:0;padding-left:0;margin-bottom:8px"><span class="feed-tag">AI DEBRIEF</span><span class="feed-name">總結研判</span></div>
+        ${esc(pickTemp(DEMO.feedback.conclusion))}
       </div>
 
       <div class="footer-nav">
@@ -418,13 +509,13 @@
 
   let modalCloseCb = null;
 
-  function openModal(innerHtml, onClose) {
+  function openModal(innerHtml, onClose, cls) {
     closeModal();
     modalCloseCb = onClose || null;
     const mask = document.createElement('div');
     mask.className = 'modal-mask';
     mask.id = 'modalMask';
-    mask.innerHTML = `<div class="modal">${innerHtml}</div>`;
+    mask.innerHTML = `<div class="modal${cls ? ' ' + cls : ''}">${innerHtml}</div>`;
     document.body.appendChild(mask);
     mask.addEventListener('click', (e) => { if (e.target === mask) closeModal(true); });
     mask.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeModal(true)));
@@ -443,7 +534,7 @@
     const A = DEMO.assistant;
     if (!S.botOpen) {
       root.innerHTML = `
-        <button class="bot-fab" id="botFab" title="思考助手">🤖${S.botSeen ? '' : '<span class="badge"></span>'}</button>`;
+        <button class="bot-fab" id="botFab" title="思考助手"><img src="${MEDIA.bot}" alt="思考助手">${S.botSeen ? '' : '<span class="badge"></span>'}</button>`;
       $('#botFab').addEventListener('click', () => {
         S.botOpen = true;
         S.botSeen = true;
@@ -456,7 +547,7 @@
     root.innerHTML = `
       <div class="bot-panel">
         <div class="bot-head">
-          <div class="b-avatar">💡</div>
+          <div class="b-avatar"><img src="${MEDIA.bot}" alt=""></div>
           <div><div class="nm">思考助手・${A.name}</div><div class="st">不會給答案，只給思考方向｜${tempLabel()}</div></div>
           <button class="x" id="botClose">×</button>
         </div>
@@ -472,7 +563,7 @@
           </div>
         </div>
       </div>
-      <button class="bot-fab" id="botFab">🤖</button>
+      <button class="bot-fab" id="botFab"><img src="${MEDIA.bot}" alt="思考助手"></button>
     `;
     drawBot();
     $('#botClose').addEventListener('click', () => { S.botOpen = false; renderBot(); });
@@ -514,10 +605,10 @@
     el.innerHTML = S.botLog.map((m) => m.who === 'me'
       ? `<div class="msg me"><div class="bubble">${esc(m.text)}</div></div>`
       : `<div class="msg them">
-           <div class="avatar" style="border-color:var(--accent);font-size:14px">💡</div>
+           <img class="avatar photo" src="${MEDIA.bot}" alt="">
            <div class="bubble"><span class="temp-chip ${m.temp}">${m.temp === 'low' ? '低溫 T≈0.2' : '高溫 T≈1.0'}</span><br>${esc(m.text)}</div>
          </div>`).join('')
-      + (typing ? `<div class="msg them"><div class="avatar" style="border-color:var(--accent);font-size:14px">💡</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>` : '');
+      + (typing ? `<div class="msg them"><img class="avatar photo" src="${MEDIA.bot}" alt=""><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>` : '');
     el.scrollTop = el.scrollHeight;
   }
 

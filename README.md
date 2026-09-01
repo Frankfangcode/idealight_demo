@@ -28,9 +28,17 @@
 
 ```
 index.html    入口（單頁應用）
-css/demo.css  樣式（深色偵探風、手機優先）
+css/demo.css  樣式（電影諜報檔案風、手機優先）
 js/data.js    劇本資料＋所有罐頭 AI 回答（低溫/高溫兩版本）
 js/app.js     流程邏輯（案情→證詞→訊問→判斷→回饋＋小助手）
+img/          AI 生成的場景背景（bg_*.jpeg）與人物照（char_1~6.jpeg）、小助手頭像（bot.jpeg）
 ```
 
 要改文案只需要動 `js/data.js`。
+
+## 背景動畫與影片
+
+- 每個階段有專屬全畫面背景（`img/bg_案情鍵名.jpeg`），以 Ken Burns 慢速推鏡 40 秒循環，換階段時交叉淡入；`prefers-reduced-motion` 時停用動畫。
+- **要換成真正的影片**：把同名 `.mp4`（無聲、循環用，建議 8–12 秒 H.264）放進 `img/`，例如 `img/bg_intro.mp4`。程式會自動嘗試載入，成功就從靜態圖切成影片，失敗則安靜維持靜態圖，不用改任何程式。
+- 影片可用 KLING / MiniMax 等圖生影片工具，直接以對應的 `bg_*.jpeg` 當首幀生成，即可與靜態版無縫銜接。
+- 人物照對應 `js/data.js` 的角色 `key`（`img/char_{key}.jpeg`），換人物照直接覆蓋同名檔案即可。
