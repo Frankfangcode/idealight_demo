@@ -18,6 +18,7 @@
     askedCount: {},     // charKey -> 已提問次數
     pick: null,         // 舊參數相容：最不合理的一人
     wall: {},           // 證據牆分類 charKey -> 'reasonable' | 'flaw'
+    wallNote: '',       // 證據牆筆記
     reason: '',
     submitted: false,
     botOpen: false,
@@ -30,7 +31,8 @@
     { key: 'intro', label: '案情' },
     { key: 'testimony', label: '六人證詞' },
     { key: 'interrogation', label: '訊問' },
-    { key: 'ranking', label: '證據牆' },
+    { key: 'wall', label: '證據牆' },
+    { key: 'ranking', label: '推理判斷' },
     { key: 'feedback', label: '回饋' },
   ];
 
@@ -139,6 +141,7 @@
       intro: 'img/bg_intro',
       testimony: 'img/bg_testimony',
       interrogation: 'img/bg_interrogation',
+      wall: 'img/bg_ranking',
       ranking: 'img/bg_ranking',
       feedback: 'img/bg_feedback',
     },
@@ -191,7 +194,7 @@
 
   function renderStep() {
     setScene(STEPS[S.step].key);
-    const fns = [viewIntro, viewTestimony, viewInterrogation, viewRanking, viewFeedback];
+    const fns = [viewIntro, viewTestimony, viewInterrogation, viewWall, viewRanking, viewFeedback];
     fns[S.step]();
   }
 
@@ -200,8 +203,9 @@
       { n: '01', t: '看案情', d: '一盒蛋糕從冰箱裡消失了。先讀完案發紀錄。' },
       { n: '02', t: '讀證詞', d: '六個人各說一段自己看到、聽到的事。' },
       { n: '03', t: '訊問', d: '對任何人追問，看他的說法撐不撐得住。' },
-      { n: '04', t: '證據牆', d: '把六段說法分成「合理」與「破綻」兩堆，寫下理由。' },
-      { n: '05', t: '回饋', d: '看看你的推理哪裡站得住、哪裡被帶風向。' },
+      { n: '04', t: '證據牆', d: '把六段說法分成「合理」與「破綻」兩堆。' },
+      { n: '05', t: '推理判斷', d: '從破綻中選出「最不合理」的一句，寫下理由。' },
+      { n: '06', t: '回饋', d: '看看你的推理哪裡站得住、哪裡被帶風向。' },
     ];
     app().innerHTML = `
       <div class="hero">
@@ -465,7 +469,7 @@
 
   /* ------------------------------------------------------------ 推理判斷 */
 
-  function viewRanking() {
+  function viewWall() {
     const chars = DEMO.characters;
     const idxOf = (k) => chars.findIndex((x) => x.key === k) + 1;
     const inZone = (z) => chars.filter((c) => S.wall[c.key] === z);
@@ -491,7 +495,7 @@
     app().innerHTML = `
       <div class="eyebrow">PHASE 4 ／ EVIDENCE REVIEW</div>
       <h2>證據牆</h2>
-      <p class="hint-line">把六個人的說法分成兩堆：來源、範圍與限制清楚的放<b>「合理說法」</b>；技巧使用有瑕疵的放<b>「破綻證據牆」</b>。可以按按鈕，也可以直接拖曳卡片。提交前都可以改。<b>本關有 ${nR} 則合理、${nF} 則有瑕疵。</b></p>
+      <p class="hint-line">把六個人的說法分成兩堆：來源、範圍與限制清楚的放<b>「合理說法」</b>；技巧使用有瑕疵的放<b>「破綻證據牆」</b>。可以按按鈕，也可以直接拖曳卡片。進入下一階段前都可以回來改。<b>本關有 ${nR} 則合理、${nF} 則有瑕疵。</b></p>
 
       <div class="ev-zones">
         <div class="ev-zone reasonable" data-zone="reasonable">
@@ -511,17 +515,17 @@
         <div class="ez-body pool-grid">${unsorted.map((c) => card(c, 'none')).join('') || '<div class="ez-empty">所有說法都已上牆</div>'}</div>
       </div>
 
-      <textarea class="reason" id="reasonBox" placeholder="我的理由：破綻證據牆上的說法，各自從哪一個觀察，跳到了哪一個結論？">${esc(S.reason)}</textarea>
+      <textarea class="reason" id="wallNote" placeholder="證據牆筆記（選填）：破綻證據牆上的說法，各自從哪一個觀察，跳到了哪一個結論？">${esc(S.wallNote)}</textarea>
       <div class="footer-nav">
         <button class="btn ghost" id="back3">← 訊問</button>
-        <button class="btn" id="submitBtn" ${done ? '' : 'disabled'}>提交證據牆 →</button>
+        <button class="btn" id="submitBtn" ${done ? '' : 'disabled'}>完成證據牆，前往推理判斷 →</button>
       </div>
     `;
 
     const move = (k, to) => {
-      S.reason = $('#reasonBox').value;
+      S.wallNote = $('#wallNote').value;
       if (to === 'none') delete S.wall[k]; else S.wall[k] = to;
-      viewRanking();
+      viewWall();
     };
     app().querySelectorAll('.ev-btn').forEach((b) =>
       b.addEventListener('click', (e) => { e.stopPropagation(); move(b.dataset.k, b.dataset.to); }));
@@ -546,9 +550,48 @@
       });
     });
 
-    $('#reasonBox').addEventListener('input', (e) => { S.reason = e.target.value; });
+    $('#wallNote').addEventListener('input', (e) => { S.wallNote = e.target.value; });
     $('#back3').addEventListener('click', () => go(2));
-    $('#submitBtn').addEventListener('click', () => { S.submitted = true; go(4); });
+    $('#submitBtn').addEventListener('click', () => go(4));
+  }
+
+  /* ---------------------------------------------------------- 推理判斷 */
+
+  function viewRanking() {
+    const onWall = DEMO.characters.filter((c) => S.wall[c.key] === 'flaw');
+    const wallDone = DEMO.characters.every((c) => S.wall[c.key]);
+    app().innerHTML = `
+      <div class="eyebrow">PHASE 5 ／ JUDGEMENT</div>
+      <h2>推理判斷</h2>
+      <p class="hint-line">${wallDone
+        ? `你的破綻證據牆上有 <b>${onWall.length} 則</b>說法。從中選出你認為<b>最不合理</b>的一個人，並寫下理由。（也可以選牆外的人，但想一想為什麼。）`
+        : '證據牆尚未分類完成，仍可先在這裡選出你認為<b>說法最不合理</b>的一個人，並寫下理由。'}</p>
+      <div class="pick-list" style="margin-top:16px">
+        ${DEMO.characters.map((c, i) => `
+          <div class="pick-item ${S.pick === c.key ? 'on' : ''} ${S.wall[c.key] === 'flaw' ? 'wall-flaw' : S.wall[c.key] === 'reasonable' ? 'wall-ok' : ''}" data-k="${c.key}">
+            <div class="pi-num">0${i + 1}</div>
+            <div class="pi-body">
+              <div class="pi-name">${c.name}<span class="pi-role">${c.role}</span>${S.wall[c.key] ? `<span class="pi-wall ${S.wall[c.key]}">${S.wall[c.key] === 'flaw' ? '破綻牆' : '合理'}</span>` : ''}</div>
+              <div class="pi-text">「${esc(c.testimony.slice(0, 52))}…」</div>
+            </div>
+            <div class="tick">${S.pick === c.key ? '✓' : ''}</div>
+          </div>`).join('')}
+      </div>
+      <textarea class="reason" id="reasonBox" placeholder="我的理由：這個說法從哪一個觀察，跳到了哪一個結論？">${esc(S.reason)}</textarea>
+      <div class="footer-nav">
+        <button class="btn ghost" id="back4">← 證據牆</button>
+        <button class="btn" id="submitBtn" ${S.pick ? '' : 'disabled'}>送出判斷 →</button>
+      </div>
+    `;
+    app().querySelectorAll('.pick-item').forEach((el) =>
+      el.addEventListener('click', () => {
+        S.pick = el.dataset.k;
+        S.reason = $('#reasonBox').value;
+        viewRanking();
+      }));
+    $('#reasonBox').addEventListener('input', (e) => { S.reason = e.target.value; });
+    $('#back4').addEventListener('click', () => go(3));
+    $('#submitBtn').addEventListener('click', () => { S.submitted = true; go(5); });
   }
 
   /* ---------------------------------------------------------------- 回饋 */
@@ -556,19 +599,19 @@
   function viewFeedback() {
     if (!S.submitted) {
       app().innerHTML = `
-        <div class="eyebrow">PHASE 5 ／ FEEDBACK</div>
+        <div class="eyebrow">PHASE 6 ／ FEEDBACK</div>
         <h2>回饋</h2>
-        <div class="card dim">請先完成「證據牆」並提交，才會產生回饋。</div>
-        <div class="footer-nav"><button class="btn ghost" id="backF">← 前往證據牆</button><span></span></div>
+        <div class="card dim">請先完成「推理判斷」並送出，才會產生回饋。</div>
+        <div class="footer-nav"><button class="btn ghost" id="backF">← 前往推理判斷</button><span></span></div>
       `;
-      $('#backF').addEventListener('click', () => go(3));
+      $('#backF').addEventListener('click', () => go(4));
       return;
     }
 
     /* 控制組：只確認收到作答，不給任何 AI 回饋 */
     if (S.group === 'ctrl') {
       app().innerHTML = `
-        <div class="eyebrow">PHASE 5 ／ FEEDBACK（控制組）</div>
+        <div class="eyebrow">PHASE 6 ／ FEEDBACK（控制組）</div>
         <div class="card control-done">
           <div class="big">📮</div>
           <h2>作答已送出</h2>
@@ -582,11 +625,13 @@
 
     /* 實驗組：AI 逐一判斷瑕疵 + 批判思考引導 */
     const total = DEMO.characters.length;
+    const sorted = DEMO.characters.filter((c) => S.wall[c.key]).length;
     const correct = DEMO.characters.filter((c) => S.wall[c.key] === c.verdict).length;
-    const allRight = correct === total;
     const zoneName = (z) => (z === 'reasonable' ? '合理說法' : z === 'flaw' ? '破綻證據牆' : '未分類');
+    const picked = charOf(S.pick);
+    const hit = picked && picked.verdict === 'flaw';
     app().innerHTML = `
-      <div class="eyebrow">PHASE 5 ／ FEEDBACK（實驗組・${tempLabel()}）</div>
+      <div class="eyebrow">PHASE 6 ／ FEEDBACK（實驗組・${tempLabel()}）</div>
       <h2>AI 批判思考回饋</h2>
 
       <div class="card ai-card">
@@ -594,16 +639,24 @@
         ${esc(pickTemp(DEMO.feedback.opening))}
       </div>
 
-      <div class="pick-result ${allRight ? 'hit' : 'miss'}">
-        你的證據牆分類：<b>${correct}／${total} 則與 AI 判定一致</b><br>
-        ${allRight
+      <div class="pick-result ${hit ? 'hit' : 'miss'}">
+        你選出的最不合理說法：<b>${picked ? picked.name : '（未選）'}</b><br>
+        ${hit
           ? (S.temp === 'low'
-              ? 'AI 判定：六則說法的分類全部正確。請對照下方各項判準，確認你的依據是否與之相符。'
-              : '全對！👏 六張卡都放對地方了，往下看看 AI 的理由跟你想的一不一樣～')
+              ? 'AI 判定：正確。此說法確實含有推論瑕疵，詳見下方分析。'
+              : '答對了！👏 這個說法真的有問題，往下看 AI 幫你拆解～')
           : (S.temp === 'low'
-              ? '部分分類與 AI 判定不同。下方標示「⚠ 你放在…」的項目，請對照判準重新檢視你原本的依據。'
-              : '有幾張放錯邊了 🤔 往下找標了「⚠ 你放在…」的那幾位，看看自己是被哪句話帶偏的！')}
+              ? 'AI 判定：此說法屬於合理陳述。含有瑕疵的說法請見下方標示，並對照你原本的判斷依據。'
+              : '嗯～其實這位的說法是站得住腳的喔 🤔 有瑕疵的另有其人，往下看你就知道哪裡被帶偏了！')}
         ${S.reason ? `<div class="fb-quote">你的理由：「${esc(S.reason)}」</div>` : ''}
+      </div>
+
+      <div class="pick-result wall ${sorted === total && correct === total ? 'hit' : 'miss'}">
+        你的證據牆：<b>${sorted ? `${correct}／${total} 則與 AI 判定一致` : '未分類'}</b><br>
+        ${sorted === total && correct === total
+          ? (S.temp === 'low' ? '六則說法的分類全部正確。下方各項標示可對照你的依據。' : '六張卡都放對邊了 👏 下面對照一下理由～')
+          : (S.temp === 'low' ? '下方標示「⚠ 你放在…」的項目，請對照判準重新檢視分類依據。' : '往下找標了「⚠ 你放在…」的那幾位，看看是被哪句話帶偏的！')}
+        ${S.wallNote ? `<div class="fb-quote">證據牆筆記：「${esc(S.wallNote)}」</div>` : ''}
       </div>
 
       <h2 style="margin-top:22px">六人說法逐一檢視</h2>
@@ -624,11 +677,11 @@
       </div>
 
       <div class="footer-nav">
-        <button class="btn ghost" id="back4">← 回證據牆</button>
+        <button class="btn ghost" id="back5">← 回推理判斷</button>
         <button class="btn" disabled>前往下一關（demo 僅一關）</button>
       </div>
     `;
-    $('#back4').addEventListener('click', () => go(3));
+    $('#back5').addEventListener('click', () => go(4));
   }
 
   /* ---------------------------------------------------------------- Modal */
@@ -741,16 +794,13 @@
   /* ---------------------------------------------------------------- 啟動 */
 
   /* URL 參數可直接跳到特定情境，方便簡報與測試：
-     ?temp=high&group=ctrl&step=4&pick=3&chat=4&bot=1 */
+     ?temp=high&group=ctrl&step=6&pick=3&wall=auto&chat=4&bot=1 */
   (function initFromUrl() {
     const qp = new URLSearchParams(location.search);
     if (['low', 'high'].includes(qp.get('temp'))) S.temp = qp.get('temp');
     if (['exp', 'ctrl'].includes(qp.get('group'))) S.group = qp.get('group');
-    if (qp.get('pick') && charOf(qp.get('pick'))) {
-      S.pick = qp.get('pick'); S.submitted = true;
-      DEMO.characters.forEach((c) => { S.wall[c.key] = c.key === S.pick ? 'flaw' : 'reasonable'; });
-    }
-    if (qp.get('wall') === 'auto') { DEMO.characters.forEach((c) => { S.wall[c.key] = c.verdict; }); S.submitted = true; }
+    if (qp.get('pick') && charOf(qp.get('pick'))) { S.pick = qp.get('pick'); S.submitted = true; }
+    if (qp.get('wall') === 'auto') DEMO.characters.forEach((c) => { S.wall[c.key] = c.verdict; });
     const st = Number(qp.get('step'));
     if (st >= 1 && st <= STEPS.length) S.step = st - 1;
     S._openChat = charOf(qp.get('chat')) ? qp.get('chat') : null;
