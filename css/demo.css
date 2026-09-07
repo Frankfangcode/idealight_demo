@@ -238,6 +238,41 @@ h2 { font-size: 20px; font-weight: 900; letter-spacing: 0.12em; margin-bottom: 1
 }
 .now-task b { font-weight: 700; color: var(--text); }
 
+
+/* 首頁：遊戲說明＋六人介紹 */
+.intro-sec { margin: 30px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.sec-head .eyebrow { margin: 0; }
+.sec-note { font-size: 12px; color: var(--text-dim); letter-spacing: 0.06em; }
+.intro-lead { font-size: 15.5px; line-height: 1.85; color: #d3d5d8; max-width: 680px; margin-bottom: 18px; }
+.intro-lead b { color: var(--text); font-weight: 700; }
+
+.howto { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.ht-step { background: var(--panel); border: 1px solid var(--line-soft); padding: 14px 14px 16px; position: relative; }
+.ht-n { font-family: var(--font-en); font-size: 12px; letter-spacing: 0.2em; color: var(--red); margin-bottom: 10px; }
+.ht-t { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.ht-d { font-size: 13px; color: var(--text-dim); line-height: 1.7; }
+
+.cast { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.cast-item { text-align: center; }
+.cast-photo { position: relative; width: 72px; height: 72px; margin: 0 auto 10px; border: 1px solid var(--line); background: var(--panel-2); overflow: hidden; }
+.cast-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top center; filter: saturate(0.7) contrast(1.05); display: block; }
+.cast-no { position: absolute; left: 0; bottom: 0; font-family: var(--font-en); font-size: 10px; letter-spacing: 0.15em; padding: 2px 5px; background: rgba(8, 9, 11, 0.85); color: var(--text-dim); }
+.cast-name { font-size: 15px; font-weight: 700; letter-spacing: 0.06em; }
+.cast-role { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.cast-trait { font-size: 12px; color: #7d838b; line-height: 1.6; margin-top: 6px; }
+
+@media (max-width: 860px) {
+  .howto { grid-template-columns: repeat(3, 1fr); }
+  .cast { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+  .howto { grid-template-columns: 1fr 1fr; }
+  .cast { grid-template-columns: repeat(3, 1fr); gap: 10px 6px; }
+  .cast-photo { width: 60px; height: 60px; }
+  .cast-trait { display: none; }
+}
+
 /* 步驟導覽 */
 .stepper {
   display: flex;

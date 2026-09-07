@@ -194,6 +194,13 @@
   }
 
   function viewIntro() {
+    const howto = [
+      { n: '01', t: '看案情', d: '一盒蛋糕從冰箱裡消失了。先讀完案發紀錄。' },
+      { n: '02', t: '讀證詞', d: '六個人各說一段自己看到、聽到的事。' },
+      { n: '03', t: '訊問', d: '對任何人追問，看他的說法撐不撐得住。' },
+      { n: '04', t: '判斷', d: '選出「最不合理」的說法，寫下你的理由。' },
+      { n: '05', t: '回饋', d: '看看你的推理哪裡站得住、哪裡被帶風向。' },
+    ];
     app().innerHTML = `
       <div class="hero">
         <div class="eyebrow">互動批判思考偵探遊戲 ／ 模擬展示</div>
@@ -201,6 +208,32 @@
         <h1 class="zh-display">${DEMO.meta.title}</h1>
         <p class="tagline">監視器沒有正對冰箱。六個人的說法，是你唯一的畫面——而每一句，都只說了一部分。</p>
       </div>
+
+      <section class="intro-sec">
+        <div class="sec-head"><span class="eyebrow">WHAT IS THIS ／ 這個遊戲要做什麼</span></div>
+        <p class="intro-lead">你<b>不是要找出兇手</b>。你要做的是：聽六個人講話，分辨誰說的是<b>親眼所見</b>、誰在<b>自行推測</b>，然後找出<b>最站不住腳的那一句</b>。</p>
+        <div class="howto">
+          ${howto.map((h) => `
+            <div class="ht-step">
+              <div class="ht-n">${h.n}</div>
+              <div class="ht-t">${h.t}</div>
+              <div class="ht-d">${h.d}</div>
+            </div>`).join('')}
+        </div>
+      </section>
+
+      <section class="intro-sec">
+        <div class="sec-head"><span class="eyebrow">THE SIX ／ 六名住戶</span><span class="sec-note">當晚都出現在交誼廳與公共廚房附近</span></div>
+        <div class="cast">
+          ${DEMO.characters.map((c, i) => `
+            <div class="cast-item">
+              <div class="cast-photo"><img src="${MEDIA.charImg(c.key)}" alt="${c.name}"><span class="cast-no">0${i + 1}</span></div>
+              <div class="cast-name">${c.name}</div>
+              <div class="cast-role">${c.role}</div>
+              <div class="cast-trait">${esc(c.trait)}</div>
+            </div>`).join('')}
+        </div>
+      </section>
 
       <div class="now-task">
         <div><span class="nt-label">你現在知道</span><b>23:00 左右下層那一格被發現已空；巡查簿在 22:47 那一輪寫著「已檢查｜正常」。</b></div>
