@@ -13,6 +13,7 @@
     group: 'exp',       // exp | ctrl （實驗組＝AI 回饋／控制組＝無回饋）
     step: 0,            // 0 案情 1 證詞 2 訊問 3 判斷 4 回饋
     read: {},           // 翻開過的證詞卡
+    testiView: 'grid',  // grid 逐一查看 | all 全部並列
     chats: {},          // charKey -> [{who:'me'|'them', text, temp}]
     askedCount: {},     // charKey -> 已提問次數
     pick: null,
@@ -256,10 +257,11 @@
   }
 
   function viewTestimony() {
-    app().innerHTML = `
-      <div class="eyebrow">PHASE 2 ／ TESTIMONY</div>
-      <h2>六人發言</h2>
-      <p class="hint-line">點開證詞檔案，閱讀每個人的說法。閱讀時留意：哪些是<b>親眼所見</b>，哪些是<b>自行推測</b>？</p>
+    const all = S.testiView === 'all';
+    if (all) DEMO.characters.forEach((c) => { S.read[c.key] = true; });
+    const readCount = DEMO.characters.filter((c) => S.read[c.key]).length;
+
+    const gridHtml = `
       <div class="char-grid" style="margin-top:16px">
         ${DEMO.characters.map((c, i) => `
           <div class="char-card ${S.read[c.key] ? 'read' : ''}" data-k="${c.key}">
@@ -276,14 +278,49 @@
               <div class="cc-cta">開啟證詞檔案 →</div>
             </div>
           </div>`).join('')}
+      </div>`;
+
+    const allHtml = `
+      <div class="compare-grid" style="margin-top:16px">
+        ${DEMO.characters.map((c, i) => `
+          <article class="cmp-item" data-k="${c.key}">
+            <div class="cmp-head">
+              <img class="avatar photo" src="${MEDIA.charImg(c.key)}" alt="">
+              <div>
+                <div class="cmp-code">SUBJ—0${i + 1}</div>
+                <div class="cmp-name">${c.name}<span class="cmp-role">${c.role}</span></div>
+              </div>
+            </div>
+            <div class="cmp-quote">「${esc(c.testimony)}」</div>
+            <div class="cmp-foot"><span>${esc(c.trait)}</span><button class="link-btn" data-open="${c.key}">單獨檢視 →</button></div>
+          </article>`).join('')}
+      </div>`;
+
+    app().innerHTML = `
+      <div class="eyebrow">PHASE 2 ／ TESTIMONY</div>
+      <h2>六人發言</h2>
+      <div class="view-bar">
+        <p class="hint-line" style="margin:0">${all
+          ? '六段證詞並列，方便<b>互相對照</b>：誰的說法跟誰衝突？誰講的比看到的多？'
+          : '點開證詞檔案，逐一閱讀。留意：哪些是<b>親眼所見</b>，哪些是<b>自行推測</b>？'}</p>
+        <div class="seg" id="tv-seg">
+          <button class="${all ? '' : 'on'}" data-v="grid">逐一查看</button>
+          <button class="${all ? 'on' : ''}" data-v="all">全部並列</button>
+        </div>
       </div>
+      ${all ? allHtml : gridHtml}
+      <p class="hint-line">已閱讀 ${readCount}／${DEMO.characters.length} 份證詞。</p>
       <div class="footer-nav">
         <button class="btn ghost" id="back1">← 案情</button>
         <button class="btn" id="next1">前往訊問 →</button>
       </div>
     `;
+    app().querySelectorAll('#tv-seg button').forEach((b) =>
+      b.addEventListener('click', () => { S.testiView = b.dataset.v; renderStep(); }));
     app().querySelectorAll('.char-card').forEach((el) =>
       el.addEventListener('click', () => openTestimony(el.dataset.k)));
+    app().querySelectorAll('[data-open]').forEach((el) =>
+      el.addEventListener('click', () => openTestimony(el.dataset.open)));
     $('#back1').addEventListener('click', () => go(0));
     $('#next1').addEventListener('click', () => go(2));
   }

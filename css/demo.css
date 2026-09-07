@@ -273,6 +273,21 @@ h2 { font-size: 20px; font-weight: 900; letter-spacing: 0.12em; margin-bottom: 1
   .cast-trait { display: none; }
 }
 
+
+/* 證詞階段：檢視模式切換＋全部並列對照 */
+.view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cmp-item { background: var(--panel); border: 1px solid var(--line-soft); padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.cmp-head { display: flex; align-items: center; gap: 10px; }
+.cmp-code { font-family: var(--font-en); font-size: 11px; letter-spacing: 0.2em; color: var(--text-dim); }
+.cmp-name { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
+.cmp-role { font-size: 12px; font-weight: 400; color: var(--text-dim); margin-left: 8px; }
+.cmp-quote { border-left: 3px solid var(--red); background: rgba(255, 255, 255, 0.03); padding: 10px 12px; font-size: 14.5px; line-height: 1.85; flex: 1; }
+.cmp-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: #7d838b; }
+.link-btn { background: none; border: 0; color: var(--text-dim); font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; letter-spacing: 0.04em; }
+.link-btn:hover { color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 720px) { .compare-grid { grid-template-columns: 1fr; } }
+
 /* 步驟導覽 */
 .stepper {
   display: flex;
