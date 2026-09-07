@@ -203,20 +203,20 @@
       </div>
 
       <div class="now-task">
-        <div><span class="nt-label">你現在知道</span><b>23:00 左右 B-9 被發現已空；系統在 22:47:09 記下「標籤狀態異常」。</b></div>
+        <div><span class="nt-label">你現在知道</span><b>23:00 左右下層那一格被發現已空；巡查簿在 22:47 那一輪寫著「已檢查｜正常」。</b></div>
         <div><span class="nt-label">目前任務</span><b>${esc(DEMO.meta.task)}</b></div>
       </div>
 
       <div class="video-box">
         <div class="vb-head"><span class="feed-tag">SECURE FEED</span><span class="feed-name">案發紀錄｜demo 以逐字稿代替影片</span></div>
-        ${DEMO.script.map((p) => `<p class="${/COLD-6|22:47/.test(p) ? 'sys' : ''}">${esc(p)}</p>`).join('')}
+        ${DEMO.script.map((p) => `<p class="${/巡查簿|22:47/.test(p) ? 'sys' : ''}">${esc(p)}</p>`).join('')}
       </div>
 
       <p class="hint-line">${DEMO.meta.level}｜訓練焦點：${DEMO.meta.skills}</p>
 
       <div class="footer-nav">
         <span></span>
-        <button class="btn" id="next0">從 B-9 空了那一刻開始 ↗</button>
+        <button class="btn" id="next0">從下層空了那一刻開始 ↗</button>
       </div>
     `;
     $('#next0').addEventListener('click', () => go(1));
